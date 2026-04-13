@@ -1,0 +1,18 @@
+# ── Core ML ──────────────────────────────────────────────────────────────────
+torch>=2.1.0               # CNN layout scorer (CPU build fine for dev)
+torchvision>=0.16.0        # optional — for image utilities
+
+# ── Genetic Algorithm ─────────────────────────────────────────────────────────
+deap>=1.4.1                # Evolutionary algorithms framework
+
+# ── Web Framework ─────────────────────────────────────────────────────────────
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+numpy>=1.26.0
+scipy>=1.11.0              # used internally by DEAP
+
+# ── Development / Testing ─────────────────────────────────────────────────────
+pytest>=8.0.0
+requests>=2.31.0           # for API integration tests
