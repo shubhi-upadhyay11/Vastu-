@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 
 export default function App() {
   const primaryColor = "#1ABC9C"; // new main color (teal)
@@ -32,36 +33,44 @@ export default function App() {
   }
 
   // -------- Mock Processing --------
-  function startProcessing(mockData = false) {
-    // check if mandatory fields are filled
-    if (!form.roomType || !form.belief || !form.length || !form.width) {
-      alert("Please fill all required fields before generating layout!");
-      setPage("input");
-      return;
-    }
-
-    setPage("processing");
-    setResult(null);
-    setAccepted(false);
-
-    if (mockData) {
-      setTimeout(() => {
-        const mock = {
-          title: `${form.roomType} Layout Suggestion`,
-          summary: `Recommendation (based on ${form.belief}): Place key furniture in the ${
-            form.belief === "Vastu" ? "South-West" : "South"
-          } sector. Keep entrance area clear; avoid clutter in North-East.`,
-          layoutHints: [
-            "Bed in SW corner, head towards South",
-            "Desk near East wall for natural light",
-            "Keep fireplace or heavy furniture in South",
-          ],
-        };
-        setResult(mock);
-        setPage("output");
-      }, 1800);
-    }
+ async function startProcessing() {
+  if (!form.roomType || !form.belief || !form.length || !form.width) {
+    alert("Please fill all required fields before generating layout!");
+    setPage("input");
+    return;
   }
+
+  setPage("processing");
+  setResult(null);
+  setAccepted(false);
+
+  try {
+    const formData = new FormData();
+    formData.append("roomType", form.roomType);
+    formData.append("belief", form.belief);
+    formData.append("length", form.length);
+    formData.append("width", form.width);
+    formData.append("notes", form.notes);
+
+    const fileInput = document.querySelector("input[type='file']");
+    if (fileInput && fileInput.files[0]) {
+      formData.append("image", fileInput.files[0]);
+    }
+
+    const res = await axios.post(
+      "http://localhost:5000/generate",
+      formData
+    );
+
+    setResult(res.data);
+    setPage("output");
+
+  } catch (error) {
+    console.error(error);
+    alert("Error connecting to backend");
+    setPage("input");
+  }
+}
 
   // -------- Login --------
   function handleLogin(e) {
@@ -271,7 +280,7 @@ export default function App() {
 
               <div className="flex gap-3 mt-4">
                 <button
-                  onClick={() => startProcessing(true)}
+                  onClick={startProcessing}
                   className="px-5 py-3 rounded-full font-medium shadow transition-all duration-300 hover:scale-105"
                   style={{ background: primaryColor, color: "white" }}
                 >
@@ -336,7 +345,7 @@ export default function App() {
                     alert("Please enter feedback before re-processing.");
                     return;
                   }
-                  startProcessing(true);
+                  startProcessing();
                 }}
                 className="px-5 py-3 rounded-full font-medium shadow transition-all duration-300 hover:scale-105"
                 style={{ background: primaryColor, color: "white" }}
