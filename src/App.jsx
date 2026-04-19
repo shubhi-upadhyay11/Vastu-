@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 
 export default function App() {
   const primaryColor = "#1ABC9C"; // new main color (teal)
@@ -149,7 +150,21 @@ export default function App() {
       alert("API call failed");
       setPage("input");
     }
+
+    const res = await axios.post(
+      "http://localhost:5000/generate",
+      formData
+    );
+
+    setResult(res.data);
+    setPage("output");
+
+  } catch (error) {
+    console.error(error);
+    alert("Error connecting to backend");
+    setPage("input");
   }
+}
 
   // -------- Login --------
   function handleLogin(e) {
@@ -431,7 +446,7 @@ export default function App() {
                     alert("Please enter feedback before re-processing.");
                     return;
                   }
-                  startProcessing(true);
+                  startProcessing();
                 }}
                 className="px-5 py-3 rounded-full font-medium shadow transition-all duration-300 hover:scale-105"
                 style={{ background: primaryColor, color: "white" }}
