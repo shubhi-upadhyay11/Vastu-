@@ -16,6 +16,7 @@ export default function App() {
     notes: "",
   });
   const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [result, setResult] = useState(null);
   const [feedback, setFeedback] = useState("");
   const [accepted, setAccepted] = useState(false);
@@ -28,38 +29,125 @@ export default function App() {
 
   function handleFileChange(e) {
     const file = e.target.files[0];
-    if (file) setImagePreview(URL.createObjectURL(file));
+    if (file) {
+      setImagePreview(URL.createObjectURL(file));
+      setImageFile(file);
+    }
   }
 
   // -------- Mock Processing --------
-  function startProcessing(mockData = false) {
-    // check if mandatory fields are filled
+  async function startProcessing() {
+    console.log("BUTTON CLICKED");
+
     if (!form.roomType || !form.belief || !form.length || !form.width) {
       alert("Please fill all required fields before generating layout!");
       setPage("input");
       return;
     }
 
+    if (!imageFile) {
+      alert("Please upload an image");
+      return;
+    }
+
     setPage("processing");
     setResult(null);
-    setAccepted(false);
 
-    if (mockData) {
-      setTimeout(() => {
-        const mock = {
-          title: `${form.roomType} Layout Suggestion`,
-          summary: `Recommendation (based on ${form.belief}): Place key furniture in the ${
-            form.belief === "Vastu" ? "South-West" : "South"
-          } sector. Keep entrance area clear; avoid clutter in North-East.`,
-          layoutHints: [
-            "Bed in SW corner, head towards South",
-            "Desk near East wall for natural light",
-            "Keep fireplace or heavy furniture in South",
-          ],
+    const formData = new FormData();
+    formData.append("files", imageFile);
+
+    try {
+      console.log("SENDING REQUEST...");
+
+      const response = await fetch("http://127.0.0.1:8000/detect", {
+        method: "POST",
+        body: formData,
+      });
+
+      console.log("RESPONSE RECEIVED");
+
+      const data = await response.json();
+      console.log("YOLO DATA:", data);
+
+      // ================= ML INTEGRATION START =================
+
+      // STEP 1: Get YOLO objects
+      const yoloObjects = data.results[0].objects;
+
+      // STEP 2: Convert YOLO → ML format
+      const detectedFurniture = yoloObjects.map((obj) => {
+        const [x1, y1, x2, y2] = obj.coordinates;
+
+        return {
+          label: obj.object,
+          w: Math.abs(x2 - x1),
+          h: Math.abs(y2 - y1),
         };
-        setResult(mock);
-        setPage("output");
-      }, 1800);
+      });
+
+      // STEP 3: Create ML payload
+      const mlPayload = {
+        room_dimensions: {
+          width: Number(form.width),
+          height: Number(form.length),
+        },
+        north_direction: "top",
+        detected_furniture: detectedFurniture,
+      };
+
+      console.log("ML PAYLOAD:", mlPayload);
+
+      if (!yoloObjects || yoloObjects.length === 0) {
+        alert("No objects detected. Try another image.");
+        setPage("input");
+        return;
+      }
+
+      console.log("FINAL ML PAYLOAD:", JSON.stringify(mlPayload, null, 2));
+
+      // STEP 4: Call ML API
+      const mlResponse = await fetch("http://127.0.0.1:5000/optimize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(mlPayload),
+      });
+
+      if (!mlResponse.ok) {
+        const errorText = await mlResponse.text();
+        console.error("ML ERROR RESPONSE:", errorText);
+        alert("ML API failed: " + errorText);
+        setPage("input");
+        return;
+      }
+
+      const mlData = await mlResponse.json();
+      console.log("ML RESPONSE:", mlData);
+
+      // STEP 5: Show ML result
+      const layouts = mlData.optimized_layouts || [];
+
+      setResult({
+        title: "Optimized Layout",
+        summary: "AI generated layouts",
+
+        layoutHints: layouts.map((layout, i) => {
+          if (!layout.furniture) return `Layout ${i + 1}`;
+
+          const items = layout.furniture.map((f) => `${f.label}`).join(", ");
+
+          return `Layout ${i + 1}: Place ${items} strategically`;
+        }),
+      });
+
+      // ================= ML INTEGRATION END =================
+
+      setPage("output");
+    } catch (error) {
+      console.error("ERROR:", error);
+      alert("API call failed");
+      setPage("input");
     }
   }
 
@@ -113,12 +201,8 @@ export default function App() {
         {/* -------- LOGIN PAGE -------- */}
         {page === "login" && (
           <section className="min-h-screen flex items-center justify-center">
-            <div
-              className="bg-[#FDF6F0] rounded-3xl p-10 shadow-2xl max-w-md w-full animate-fadeIn"
-            >
-              <h2
-                className="text-3xl font-bold mb-6 text-center text-[#4B334C]"
-              >
+            <div className="bg-[#FDF6F0] rounded-3xl p-10 shadow-2xl max-w-md w-full animate-fadeIn">
+              <h2 className="text-3xl font-bold mb-6 text-center text-[#4B334C]">
                 User Login
               </h2>
               <form onSubmit={handleLogin} className="space-y-5">
@@ -153,23 +237,20 @@ export default function App() {
                   Login
                 </button>
               </form>
-
-              
             </div>
           </section>
         )}
 
         {/* -------- HOME PAGE -------- */}
         {page === "home" && user && (
-          <section
-            className="bg-gradient-to-r from-[#E0F7F4] to-[#FFE5E5] rounded-3xl p-12 shadow-xl flex flex-col md:flex-row items-center gap-10 animate-fadeIn"
-          >
+          <section className="bg-gradient-to-r from-[#E0F7F4] to-[#FFE5E5] rounded-3xl p-12 shadow-xl flex flex-col md:flex-row items-center gap-10 animate-fadeIn">
             <div className="flex-1">
               <h2 className="text-4xl font-extrabold mb-4 text-[#1ABC9C]">
                 Welcome {user.email}
               </h2>
               <p className="text-gray-700 mb-6">
-                Start designing your room layout powered by AI-based suggestions.
+                Start designing your room layout powered by AI-based
+                suggestions.
               </p>
               <div className="flex gap-4">
                 <button
@@ -219,13 +300,15 @@ export default function App() {
                 className="w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#1ABC9C]"
               >
                 <option>Vastu</option>
-              
+
                 <option>None</option>
               </select>
 
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium">Length (m)</label>
+                  <label className="block text-sm font-medium">
+                    Length (m)
+                  </label>
                   <input
                     name="length"
                     value={form.length}
@@ -246,7 +329,9 @@ export default function App() {
                 </div>
               </div>
 
-              <label className="block text-sm font-medium">Additional Notes</label>
+              <label className="block text-sm font-medium">
+                Additional Notes
+              </label>
               <textarea
                 name="notes"
                 value={form.notes}
@@ -259,7 +344,11 @@ export default function App() {
                 <label className="block text-sm font-medium mb-2">
                   Upload Room Image (optional)
                 </label>
-                <input type="file" accept="image/*" onChange={handleFileChange} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
                 {imagePreview && (
                   <img
                     src={imagePreview}
@@ -271,7 +360,7 @@ export default function App() {
 
               <div className="flex gap-3 mt-4">
                 <button
-                  onClick={() => startProcessing(true)}
+                  onClick={startProcessing}
                   className="px-5 py-3 rounded-full font-medium shadow transition-all duration-300 hover:scale-105"
                   style={{ background: primaryColor, color: "white" }}
                 >
@@ -293,7 +382,9 @@ export default function App() {
         {page === "processing" && (
           <section className="bg-gradient-to-r from-[#1ABC9C] to-[#FF6B6B] rounded-3xl p-12 shadow-xl flex flex-col items-center animate-pulse">
             <div className="w-24 h-24 border-4 border-white border-t-transparent rounded-full animate-spin mb-4"></div>
-            <h3 className="text-xl font-bold text-white mb-2">Optimizing layout...</h3>
+            <h3 className="text-xl font-bold text-white mb-2">
+              Optimizing layout...
+            </h3>
             <p className="text-white text-center">
               AI is analyzing your inputs. Please wait...
             </p>
@@ -303,7 +394,9 @@ export default function App() {
         {/* -------- OUTPUT PAGE -------- */}
         {page === "output" && result && (
           <section className="bg-gradient-to-r from-[#E0F7F4] to-[#FFF5F5] rounded-3xl p-8 shadow-xl">
-            <h3 className="text-2xl font-semibold mb-2 text-[#1ABC9C]">{result.title}</h3>
+            <h3 className="text-2xl font-semibold mb-2 text-[#1ABC9C]">
+              {result.title}
+            </h3>
             <p className="text-gray-700 mb-4">{result.summary}</p>
 
             <div className="space-y-3 mb-4">
@@ -321,7 +414,9 @@ export default function App() {
               ))}
             </div>
 
-            <label className="block text-sm font-medium mb-2">Your feedback</label>
+            <label className="block text-sm font-medium mb-2">
+              Your feedback
+            </label>
             <textarea
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
@@ -358,8 +453,6 @@ export default function App() {
           </section>
         )}
       </main>
-
-      
 
       {/* -------- HOW IT WORKS MODAL -------- */}
       {showGuide && (
