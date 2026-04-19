@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+pycache/
+*.pyc
+*.pt
+*.jpg
+*.jpeg
+*.png
