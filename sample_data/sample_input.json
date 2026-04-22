@@ -1,0 +1,12 @@
+{
+  "room_dimensions": { "width": 15, "height": 12 },
+  "north_direction": "top",
+  "entrance_wall": "top",
+  "detected_furniture": [
+    { "label": "bed",          "w": 3.0, "h": 2.0 },
+    { "label": "wardrobe",     "w": 2.0, "h": 1.0 },
+    { "label": "desk",         "w": 1.5, "h": 1.0 },
+    { "label": "sofa",         "w": 3.0, "h": 1.2 },
+    { "label": "dining_table", "w": 2.0, "h": 1.5 }
+  ]
+}
