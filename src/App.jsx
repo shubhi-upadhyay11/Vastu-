@@ -7,6 +7,7 @@ export default function App() {
   const lightBg = "#FDF6F0"; // light card background
   const darkBg = "#3E2C1C"; // dark chocolate background
 
+  const [selectedLayout, setSelectedLayout] = useState(null);
   const [page, setPage] = useState("login");
   const [user, setUser] = useState(null);
   const [form, setForm] = useState({
@@ -131,15 +132,8 @@ export default function App() {
 
       setResult({
         title: "Optimized Layout",
-        summary: "AI generated layouts",
-
-        layoutHints: layouts.map((layout, i) => {
-          if (!layout.furniture) return `Layout ${i + 1}`;
-
-          const items = layout.furniture.map((f) => `${f.label}`).join(", ");
-
-          return `Layout ${i + 1}: Place ${items} strategically`;
-        }),
+        summary: "Click a layout to see suggestions",
+        layouts: layouts, // keep full ML data
       });
 
       // ================= ML INTEGRATION END =================
@@ -150,21 +144,7 @@ export default function App() {
       alert("API call failed");
       setPage("input");
     }
-
-    const res = await axios.post(
-      "http://localhost:5000/generate",
-      formData
-    );
-
-    setResult(res.data);
-    setPage("output");
-
-  } catch (error) {
-    console.error(error);
-    alert("Error connecting to backend");
-    setPage("input");
   }
-}
 
   // -------- Login --------
   function handleLogin(e) {
@@ -415,19 +395,41 @@ export default function App() {
             <p className="text-gray-700 mb-4">{result.summary}</p>
 
             <div className="space-y-3 mb-4">
-              {result.layoutHints.map((h, i) => (
+              {result.layouts?.map((layout, index) => (
                 <div
-                  key={i}
-                  className="p-4 rounded-2xl border-l-4 border-[#1ABC9C] bg-gradient-to-r from-[#D0F2EB] to-[#FFE5E5] shadow-lg flex items-start gap-3"
+                  key={index}
+                  onClick={() => setSelectedLayout(index)}
+                  style={{
+                    cursor: "pointer",
+                    padding: "14px 18px",
+                    marginBottom: "12px",
+                    borderRadius: "12px",
+                    background:
+                      selectedLayout === index
+                        ? "linear-gradient(to right, #6ee7b7, #fca5a5)"
+                        : "#f1f5f9",
+                    border:
+                      selectedLayout === index
+                        ? "2px solid #10b981"
+                        : "1px solid #ddd",
+                    transition: "all 0.2s ease",
+                    boxShadow:
+                      selectedLayout === index
+                        ? "0 4px 12px rgba(0,0,0,0.1)"
+                        : "none",
+                  }}
                 >
-                  <div
-                    className="w-3 h-3 rounded-full mt-2"
-                    style={{ background: primaryColor }}
-                  ></div>
-                  <div className="text-sm font-medium">{h}</div>
+                  <strong>Layout {index + 1}</strong>
                 </div>
               ))}
             </div>
+
+            {selectedLayout !== null && result.layouts && (
+              <div style={{ marginTop: "20px" }}>
+                <h3>Suggestion:</h3>
+                <p>{result.layouts[selectedLayout].suggestion}</p>
+              </div>
+            )}
 
             <label className="block text-sm font-medium mb-2">
               Your feedback
