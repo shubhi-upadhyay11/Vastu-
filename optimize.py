@@ -21,6 +21,57 @@ from genetic_algorithm.ga_optimizer import GeneticLayoutOptimizer
 # ════════════════════════════════════════════════════════════════════════════
 #  LayoutOptimizer — main facade
 # ════════════════════════════════════════════════════════════════════════════
+def generate_suggestion(layout):
+    suggestions = []
+
+    # Get violations
+    violations = layout["vastu_details"]["violations"]
+
+    # Add unique vastu-based suggestions
+    for v in violations:
+        if "SE zone" in v:
+            suggestions.append("Move bed towards southwest zone for better stability")
+
+        elif "North" in v:
+            suggestions.append("Avoid north-facing sleeping direction")
+
+        elif "overlapping" in v:
+            suggestions.append("Increase spacing between furniture objects")
+
+        elif "outside room boundaries" in v:
+            suggestions.append("Adjust furniture placement within room dimensions")
+
+    # Rotation-based suggestions
+    for p in layout["placements"]:
+        label = p.label
+        rotation = p.rotation
+
+        if label == "bed":
+
+            if rotation == 0:
+                suggestions.append("Current bed alignment supports horizontal room balance")
+
+            elif rotation == 90:
+                suggestions.append("Bed rotated vertically for optimized movement space")
+
+            elif rotation == 180:
+                suggestions.append("Bed orientation may negatively affect sleep direction")
+
+            elif rotation == 270:
+                suggestions.append("Consider rotating bed slightly toward southwest")
+
+        elif label == "chair":
+
+            if rotation == 90:
+                suggestions.append("Chair placement improves accessibility")
+
+            else:
+                suggestions.append("Chair can be positioned near study area")
+
+    # Remove duplicates while preserving order
+    final_suggestions = list(dict.fromkeys(suggestions))
+
+    return final_suggestions[:5]
 
 class LayoutOptimizer:
     """
@@ -134,6 +185,7 @@ class LayoutOptimizer:
                 "vastu_violations":   layout["vastu_details"]["violations"],
                 "vastu_rule_scores":  layout["vastu_details"]["rule_scores"],
                 "furniture_positions": furniture_positions,
+                "suggestion": generate_suggestion(layout)  
             })
 
         return {

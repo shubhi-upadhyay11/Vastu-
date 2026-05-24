@@ -427,7 +427,16 @@ export default function App() {
             {selectedLayout !== null && result.layouts && (
               <div style={{ marginTop: "20px" }}>
                 <h3>Suggestion:</h3>
-                <p>{result.layouts[selectedLayout].suggestion}</p>
+
+                <ul style={{ paddingLeft: "20px", marginTop: "10px" }}>
+                  {result.layouts[selectedLayout].suggestion?.map(
+                    (item, index) => (
+                      <li key={index} style={{ marginBottom: "8px" }}>
+                        {item}
+                      </li>
+                    )
+                  )}
+                </ul>
               </div>
             )}
 

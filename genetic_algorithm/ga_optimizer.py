@@ -191,8 +191,41 @@ class GeneticLayoutOptimizer:
         output = []
         seen_genomes = set()
         for genome, _ in results:
-            key = tuple(round(g, 2) for g in genome)
+            placements = genome_to_placements(
+                genome,
+                furniture_specs,
+                room_width,
+                room_height
+            )
+
+            key = tuple(
+                (
+                    p.label,
+                    round(p.x, 1),
+                    round(p.y, 1),
+                    p.rotation
+                )
+                for p in placements
+            )
             if key in seen_genomes:
+                continue
+            too_similar = False
+
+            for existing in seen_genomes:
+
+                similarity_count = 0
+
+                for i in range(len(key)):
+
+                    if key[i] == existing[i]:
+                        similarity_count += 1
+
+                # If too many placements are same
+                if similarity_count >= len(key) - 1:
+                    too_similar = True
+                    break
+
+            if too_similar:
                 continue
             seen_genomes.add(key)
 
@@ -236,11 +269,11 @@ class GeneticLayoutOptimizer:
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
         toolbox.register("evaluate", evaluator)
         toolbox.register("mate",   tools.cxBlend, alpha=0.3)
-        toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.15, indpb=0.3)
+        toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.45, indpb=0.6)
         toolbox.register("select", tools.selTournament, tournsize=5)
 
         pop  = toolbox.population(n=self.pop_size)
-        hof  = tools.HallOfFame(20)
+        hof  = tools.HallOfFame(50)
         stats = tools.Statistics(lambda ind: ind.fitness.values)
         stats.register("max", max)
         stats.register("avg", lambda vals: sum(v[0] for v in vals) / len(vals))
